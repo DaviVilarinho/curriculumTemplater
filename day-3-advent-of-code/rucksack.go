@@ -15,6 +15,17 @@ func asPriority(ch rune) int {
   return int(ch - 'A') + 1 + 26
 }
 
+func findCommonPriority(rucksacks []string) (int, error) {
+  for _, item := range rucksacks[0] {
+    hasInSecondRucksack := strings.Contains(rucksacks[1], string(int(item))) 
+    hasInThirdRucksack := strings.Contains(rucksacks[2], string(int(item))) 
+    if hasInSecondRucksack && hasInThirdRucksack {
+      return asPriority(item), nil
+    }
+  }
+  return 0, nil
+}
+
 func EvalPrioritySum(elfPriorityFilePath string) (int, error) {
   prioritySum := 0
   file, err := os.Open(elfPriorityFilePath)
@@ -24,21 +35,22 @@ func EvalPrioritySum(elfPriorityFilePath string) (int, error) {
   defer file.Close()
   
   scanner := bufio.NewScanner(file)
+  group := []string{}
+  line := 0
 
   for scanner.Scan() {
-    half := len(scanner.Text()) / 2
-    compartments := []string{scanner.Text()[0:half], scanner.Text()[half:len(scanner.Text())]}
-
-    most_prioritized := 0
-
-    for _, item := range compartments[0] {
-      if strings.Contains(compartments[1], string(int(item))) {
-        most_prioritized = int(math.Max(float64(asPriority(item)), float64(most_prioritized)))
+    group = append(group, scanner.Text())
+    if math.Mod(float64(line + 1), 3) == 0 {
+      mostPrioritized, err := findCommonPriority(group)
+      if err != nil {
+        panic("can't handle group")
       }
+      prioritySum += mostPrioritized
+      group = []string{}
     }
-
-    prioritySum += most_prioritized
+    line += 1
   }
+
   return prioritySum, nil
 }
 
