@@ -37,38 +37,25 @@ output
 what ends up in each stack?
 */
 
-type Stack []rune
+type FakeStack []rune
 
-func (s *Stack) Peek() (rune, error) {
+func (s *FakeStack) Peek() (rune, error) {
   if s.IsEmpty() {
     return ' ', errors.New("Empty Stack")
   }
   return (*s)[len(*s)-1], nil
 }
 
-func (s *Stack) Pop() (rune, error) {
-  last, err := s.Peek()
-  if err != nil {
-    return last, err
-  }
-  *s = (*s)[0:(len(*s)-1)]
-  return last, nil
-}
-
-func (s *Stack) Push(newRune rune) {
-  *s = append(*s, newRune)
-}
-
-func (s *Stack) IsEmpty() bool {
+func (s *FakeStack) IsEmpty() bool {
   return len(*s) == 0
 }
 
 type CratesStacks struct {
-  Stacks map[int]Stack
+  Stacks map[int]FakeStack
 }
 
 func NewCratesStacks() *CratesStacks {
-  return &CratesStacks{Stacks: make(map[int]Stack)}
+  return &CratesStacks{Stacks: make(map[int]FakeStack)}
 }
 
 func ParseInputFileStackPartIntoCrates(lines []string) *CratesStacks {
@@ -83,11 +70,11 @@ func ParseInputFileStackPartIntoCrates(lines []string) *CratesStacks {
         panic("can't parse stackNumber")
       }
 
-      stack := Stack{}
+      stack := FakeStack{}
       for stackColumnElementIndex := lastLineIndex - 1; stackColumnElementIndex >= 0; stackColumnElementIndex-- {
         runeElement := rune(lines[stackColumnElementIndex][column])
         if unicode.IsLetter(runeElement) {
-          stack.Push(runeElement)
+          stack = append(stack, runeElement)
         }
       }
       crates.Stacks[stackNumber] = stack
@@ -123,19 +110,19 @@ func ParseInputAndProcessLogs(pathToFile string) (*CratesStacks, error) {
     } else {
       var log Log
       fmt.Sscanf(scanner.Text(), "move %d from %d to %d", &log.HowMany, &log.FromStack, &log.ToStack)
-      toPopStack := cratesStacks.Stacks[log.FromStack]
+      toRemoveStack := cratesStacks.Stacks[log.FromStack]
       toAddStack := cratesStacks.Stacks[log.ToStack]
-      if toPopStack == nil || toAddStack == nil {
+      if toRemoveStack == nil || toAddStack == nil {
         return nil, errors.New("can't find pop or add stack")
       }
-      for i := 0; i < log.HowMany; i++ {
-        poppedRune, err := toPopStack.Pop()
-        if err == nil {
-          toAddStack.Push(poppedRune)
-          cratesStacks.Stacks[log.FromStack] = toPopStack
-          cratesStacks.Stacks[log.ToStack] = toAddStack
-        }
+
+      startingIndexRemoved := len(toRemoveStack) - log.HowMany
+      for i := startingIndexRemoved; i < len(toRemoveStack); i++ {
+        toAddStack = append(toAddStack, toRemoveStack[i])
       }
+      toRemoveStack = toRemoveStack[0:startingIndexRemoved]
+      cratesStacks.Stacks[log.FromStack] = toRemoveStack
+      cratesStacks.Stacks[log.ToStack] = toAddStack
     }
   }
   return cratesStacks, nil
