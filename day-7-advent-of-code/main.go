@@ -106,7 +106,29 @@ func SumDirSizesBiggerThan(directory DirectoryFile, parameter int) int {
   return sumOfSubDirsBigger
 }
 
-func AOCSumOfDirectorySizesTotalMoreThan100000(filePath string) int {
+func min(a int, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+func GetSizeOfSmallestToDelete(basedir DirectoryFile, needToFree int) int {
+  smallestDirSizeToDelete := int(^uint(0)>>1)
+  for _, file := range basedir.Files {
+    dir, isDirectory := file.(*DirectoryFile)
+    if isDirectory {
+      dirSize := dir.GetSize()
+      if dirSize < smallestDirSizeToDelete && dirSize > needToFree {
+        smallestDirSizeToDelete = dirSize
+      }
+      smallestDirSizeToDelete = min(smallestDirSizeToDelete, GetSizeOfSmallestToDelete(*dir, needToFree))
+    }
+  }
+  return smallestDirSizeToDelete
+}
+
+func AOCSmallestDirToDelete(filePath string) int {
   file, err := os.Open(filePath) 
   if err != nil {
     panic("can't open " + filePath)
@@ -148,13 +170,13 @@ func AOCSumOfDirectorySizesTotalMoreThan100000(filePath string) int {
       currentDir.Files[fileName] = NewDirFromHere(fileName, currentDir)
     }
   }
-  return SumDirSizesBiggerThan(*baseDir, 100000)
+  return GetSizeOfSmallestToDelete(*baseDir, 30000000 - 70000000 + baseDir.GetSize())
 }
 
 func main() {
   fmt.Println("EXAMPLE")
-  fmt.Println(AOCSumOfDirectorySizesTotalMoreThan100000("test.txt"))
+  fmt.Println(AOCSmallestDirToDelete("test.txt"))
   fmt.Println("-------")
   fmt.Println("INPUT")
-  fmt.Println(AOCSumOfDirectorySizesTotalMoreThan100000("input.txt"))
+  fmt.Println(AOCSmallestDirToDelete("input.txt"))
 }
